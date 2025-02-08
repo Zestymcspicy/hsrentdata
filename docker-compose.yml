@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  python-hs-app:
+    build: ./app
+    volumes:
+      - ./app:/usr/src/app
+    depends_on:
+      - mysql-hs-db
+    ports:
+      - "5000:5000"
+    environment:
+      - MYSQL_HOST=hs-db
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=BoardMember2019$
+      - MYSQL_DATABASE=rent-reports
+      - FLASK_APP=main.py
+      - FLASK_ENV=development
+
+  mysql-hs-db:
+    image: mysql:8.0
+    container_name: hs-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: BoardMember2019$
+      MYSQL_DATABASE: rent-reports
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+volumes:
+  mysql_data:
