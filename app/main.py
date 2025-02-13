@@ -4,6 +4,7 @@ import datetime
 import os
 from openpyxl import load_workbook
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import func
 from flask_migrate import Migrate, migrate
 
 app = Flask(__name__)
@@ -28,16 +29,17 @@ def index():
         cursor = connection.cursor()
         cursor.execute('SELECT DATABASE()')
         sqldb = cursor.fetchone()
-        try:
-            if request.method == 'POST':
-                info = []
-                # if 'file' not in request.files:
-                #     return 'No file part'
-                uploaded_files = request.files.getlist('file[]')
-                if uploaded_files[1] is not None:
-                    for file in uploaded_files:
-                    # file = request.files['file']
-
+        
+        if request.method == 'POST':
+            info = []
+            # if 'file' not in request.files:
+            #     return 'No file part'
+            uploaded_files = request.files.getlist('file[]')
+            if uploaded_files[1] is not None:
+                
+                for file in uploaded_files:
+                # file = request.files['file']
+                    try:    
                         if file.filename == '':
                             return 'No selected file'
                         if file.filename.endswith('.pdf'):
@@ -101,22 +103,22 @@ def index():
                             info.append(thisPaymentRow)
                                 
                                 # for cell in row:
-                                    # info.append(cell)
-                                    # info.append(date_string)
-                                    # person = Person.query.filter_by(name=cell).first()
-                                    # if person is None and cell is not None:
-                                        
-                                        
-                                        # person = Person(name=cell)
-                                        # db.session.add(person)
-                                        # db.session.commit()
-                        # info = wb.active['B3'].value
-                            
-                return render_template('index.html', info = info)
-            info = PaymentRow.query.all()
-            return render_template('index.html', info=info, database=sqldb[0])
-        except Exception as e:
-            return render_template('index.html', error=str(e))
+                                # info.append(cell)
+                                # info.append(date_string)
+                                # person = Person.query.filter_by(name=cell).first()
+                                # if person is None and cell is not None:
+                                    
+                                    
+                                    # person = Person(name=cell)
+                                    # db.session.add(person)
+                                    # db.session.commit()
+                                    # info = wb.active['B3'].value
+                    except Exception as e:
+                        return render_template('index.html', error=str(e), filename=file.filename)            
+            return render_template('index.html', info = info)
+        info = PaymentRow.query.all()
+        return render_template('index.html', info=info, database=sqldb[0])
+        
     except Exception as e:
         return render_template('index.html', error=str(e))
     finally:
@@ -161,3 +163,57 @@ if __name__ == '__main__':
 def init():
     db.create_all()
     return '<h1>Inititted</h1>'
+
+@app.route('/date/<date>')
+def show_date(date):
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+        cursor.execute('SELECT DATABASE()')
+        sqldb = cursor.fetchone()
+        info = PaymentRow.query.filter_by(date=date).all()
+        return render_template('index.html', info=info, database=sqldb[0])
+    except Exception as e:
+        return render_template('index.html', error=str(e))
+
+@app.route('/resident/<id>')
+def show_resident(id):
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+        cursor.execute('SELECT DATABASE()')
+        sqldb = cursor.fetchone()
+        info = PaymentRow.query.filter_by(person_id=id).all()
+        return render_template('index.html', info=info, database=sqldb[0])
+    except Exception as e:
+        return render_template('index.html', error=str(e))
+
+@app.route('/last-payment')
+def last_payment():
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+        cursor.execute('SELECT DATABASE()')
+        sqldb = cursor.fetchone()
+        latest = db.session.query(
+            PaymentRow.person_id,
+            func.max(PaymentRow.date).label("last_payment_date")
+        ).group_by(PaymentRow.person_id).subquery()
+
+        # Main query to select all columns from PaymentRow
+        info = db.session.query(PaymentRow).join(
+            latest, 
+            (PaymentRow.person_id == latest.c.person_id) & 
+            (PaymentRow.date == latest.c.last_payment_date) &
+            (PaymentRow.rent_balance < -100)
+        ).all()
+        return render_template('index.html', info=info, database=sqldb[0])
+    except Exception as e:
+        return render_template('index.html', error=str(e))
+    # SELECT p.rent_balance, p.food_balance, name
+    # FROM `rent-reports`.payment_row p
+    # JOIN (
+    #     SELECT person_id, MAX(date) AS last_payment_date
+    #     FROM `rent-reports`.payment_row
+    #     GROUP BY person_id
+    # ) latest ON p.person_id = latest.person_id AND p.date = latest.last_payment_date

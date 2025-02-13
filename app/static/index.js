@@ -1,3 +1,5 @@
 
-console.log("fired")
-new DataTable("table")
+window.addEventListener("DOMContentLoaded", () => {
+    new DataTable("table");
+})
+    
