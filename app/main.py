@@ -89,7 +89,7 @@ def index():
                                 row = list(row)
                                 house_position = row[6] or "None"
                                 rent_cost = int(row[7][row[7].find("-")+1:])
-                                food_cost = int(row[8][row[8].find("-")+1:])
+                                food_cost = int(row[8][row[8].find("-")+1:]) or 0
                                 rent_paid = row[4] or 0
                                 rent_carry = row[9] or 0
                                 rent_balance = rent_paid + rent_carry - rent_cost
